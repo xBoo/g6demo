@@ -64,10 +64,13 @@ G6.registerNode("customNode", {
 
 //全局node属性配置
 graph.node({
-    //label: function label(model) {
-    //    var lbl = { text: model.name, fill: "red", fontSize:"5px" };
-    //    return lbl;
-    //},
+    label: function label(model) {
+        return {
+            text: model.name,
+            fill: "black",
+            fontSize: "12px"
+        };
+    },
 
     size: 24,
     style: {
@@ -92,14 +95,63 @@ graph.edge({
 $.getJSON("Demo/GetRootNodes",
     function (data) {
         graph.read(data);
+        graph.getNodes().forEach(function (node) {
+            setLable(node);
+        });
     });
 
-$(window).resize(function () {
-    graph.setFitView("cc");
-});
+
+function removeChild(item) {
+    var edges = item.getEdges();
+    var nodes = item.itemMap._nodes;
+
+    for (var i = 0; i < edges.length; i++) {
+        if (edges[i].source.id === item.id) {
+
+            var nd = graph.find(edges[i].target.id);
+            removeChild(nd);
+            graph.remove(nd, "node");
+            graph.remove(edges[i], "edge");
+        }
+    }
+}
+
+function addNodes(ev, isChild) {
+    var url = "Demo/GetNodes?nodeId=" + ev.item.id + "&x=" + ev.x + "&y=" + ev.y + "&isChild=" + isChild;
+    $.getJSON(url, function (data) {
+        var n = data.nodes;
+        data.nodes.forEach(function (item, index) {
+            var nd = graph.add("node", item);
+            setLable(nd);
+        });
+        var e = data.edges;
+        data.edges.forEach(function (item, index) {
+            graph.add("edge", item);
+        });
+
+        graph.setFitView("cc");
+    });
+}
+
+function setLable(node) {
+    var model = node.getModel();
+    var label = node.getLabel();
+    var keyShape = node.getKeyShape();
+    var children = node.getChildren();
+    var parent = node.getParent();
+    var box = keyShape.getBBox();
+    var labelBox = label.getBBox();
+    var dx = -1 * ((box.maxX - box.minX + labelBox.maxX - labelBox.minX) / 2 );
+    var dy = 0;
+    if (children.length === 0) {
+        dx = -dx;
+    }
+    label.translate(dx, dy);
+};
 
 graph.on("click", (ev) => {
-    if (ev.item.isNode) {
+    if (ev.item != null && ev.item.isNode) {
+
         var edges = graph.getEdges();
         var hasChild = false;
         var hasParent = false;
@@ -126,32 +178,31 @@ graph.on("click", (ev) => {
     }
 });
 
-function removeChild(item) {
-    var edges = item.getEdges();
-    var nodes = item.itemMap._nodes;
+graph.on('node:dragstart', function (ev) {
+    var item = ev.item;
 
-    for (var i = 0; i < edges.length; i++) {
-        if (edges[i].source.id === item.id) {
+    var model = item.getModel();
+    node = item;
+    dx = model.x - ev.x;
+    dy = model.y - ev.y;
+});
 
-            var nd = graph.find(edges[i].target.id);
-            removeChild(nd);
-            graph.remove(nd, "node");
-            graph.remove(edges[i], "edge");
-        }
-    }
-}
-
-function addNodes(ev, isChild) {
-    var url = "Demo/GetNodes?nodeId=" + ev.item.id + "&x=" + ev.x + "&y=" + ev.y + "&isChild=" + isChild;
-    $.getJSON(url, function (data) {
-        var n = data.nodes;
-        data.nodes.forEach(function (item, index) {
-            graph.add("node", item);
-        });
-        var e = data.edges;
-        data.edges.forEach(function (item, index) {
-            graph.add("edge", item);
-        });
-        graph.setFitView("cc");
+graph.on('node:drag', function (ev) {
+    node && graph.update(node, {
+        x: ev.x + dx,
+        y: ev.y + dy
     });
-}
+});
+
+graph.on('node:dragend', function (ev) {
+    node = undefined;
+});
+
+graph.on('afterchange', function () {
+
+    graph.draw();
+});
+
+$(window).resize(function () {
+    graph.setFitView("cc");
+});
