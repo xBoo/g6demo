@@ -38,7 +38,7 @@ namespace G6.Test.Controllers
         }
 
 
-        public NodeData GetRandomNodes(string nodeId, int x, int y)
+        public NodeData GetNodes(string nodeId, float x, float y, bool isChild = true)
         {
             var nodes = new List<Node>();
             var edges = new List<Edge>();
@@ -49,18 +49,19 @@ namespace G6.Test.Controllers
                 {
                     Id = id,
                     Name = "AddNode" + i,
-                    X = x + 100,
-                    Y = y + (i % 2 == 0 ? -10 * i : 10 * i)
+                    X = x + (isChild ? 100 : -100),
+                    Y = y + (i % 2 == 0 ? -40 * i : 40 * i)
                 });
 
                 edges.Add(new Edge
                 {
-                    Source = nodeId,
-                    Target = id
+                    Source = isChild ? nodeId : id,
+                    Target = isChild ? id : nodeId
                 });
             }
 
             return new NodeData { Nodes = nodes, Edges = edges };
+
         }
     }
 }

@@ -27,12 +27,12 @@ namespace G6.Test.Models
         /// <summary>
         /// x坐标
         /// </summary>
-        public int X { get; set; }
+        public float X { get; set; }
 
         /// <summary>
         /// y坐标
         /// </summary>
-        public int Y { get; set; }
+        public float Y { get; set; }
 
         /// <summary>
         /// 颜色

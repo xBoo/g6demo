@@ -1,6 +1,6 @@
 ﻿var graph = new G6.Graph({
     container: "nodeChat",
-    fitView: "autoZoom",
+    fitView: "cc",
     height: window.innerHeight,
     //modes: {
     //    red: ['mouseEnterFillRed', 'mouseLeaveResetFill'],
@@ -69,10 +69,10 @@ graph.node({
     //    return lbl;
     //},
 
-    size: 8,
+    size: 24,
     style: {
         fill: "green",
-        stroke: "#6aa84f"
+        stroke: "black"
     },
     //shape: "customNode"
 });
@@ -81,10 +81,11 @@ graph.node({
 graph.edge({
     style: function style() {
         return {
-            endArrow: true
+            endArrow: true,
+            lineWidth: 1
         };
     },
-    //color: "black",
+
     shape: 'smooth'
 });
 
@@ -94,25 +95,63 @@ $.getJSON("Demo/GetRootNodes",
     });
 
 $(window).resize(function () {
-    graph.setFitView("autoZoom");
+    graph.setFitView("cc");
 });
 
 graph.on("click", (ev) => {
-    if (ev.item.type === "node") {
-        var url = "Demo/GetRandomNodes?nodeId=" + ev.item.id + "&x=" + parseInt(ev.x) + "&y=" + parseInt(ev.y);
-        $.getJSON(url, function (data) {
+    if (ev.item.isNode) {
+        var edges = graph.getEdges();
+        var hasChild = false;
+        var hasParent = false;
+        for (var i = 0; i < edges.length; i++) {
 
-            var n = data.nodes;
-            data.nodes.forEach(function (item, index) {
-                graph.add("node", item);
-            });
+            if (edges[i].target.id === ev.item.id) {
+                hasParent = true;
+            }
 
-            var e = data.edges;
-            data.edges.forEach(function (item, index) {
-                graph.add("edge", item);
-            });
+            if (edges[i].source.id === ev.item.id) {
+                hasChild = true;
+            }
+        }
 
-            graph.setFitView("autoZoom");
-        });
+        if (hasParent && hasChild) {
+            removeChild(ev.item);
+        }
+        else if (!hasParent && hasChild) {
+            addNodes(ev, false);
+        }
+        else {
+            addNodes(ev, true);
+        }
     }
 });
+
+function removeChild(item) {
+    var edges = item.getEdges();
+    var nodes = item.itemMap._nodes;
+
+    for (var i = 0; i < edges.length; i++) {
+        if (edges[i].source.id === item.id) {
+
+            var nd = graph.find(edges[i].target.id);
+            removeChild(nd);
+            graph.remove(nd, "node");
+            graph.remove(edges[i], "edge");
+        }
+    }
+}
+
+function addNodes(ev, isChild) {
+    var url = "Demo/GetNodes?nodeId=" + ev.item.id + "&x=" + ev.x + "&y=" + ev.y + "&isChild=" + isChild;
+    $.getJSON(url, function (data) {
+        var n = data.nodes;
+        data.nodes.forEach(function (item, index) {
+            graph.add("node", item);
+        });
+        var e = data.edges;
+        data.edges.forEach(function (item, index) {
+            graph.add("edge", item);
+        });
+        graph.setFitView("cc");
+    });
+}
